@@ -1,3 +1,4 @@
+use std::mem::replace;
 use std::time::Duration;
 
 use stdweb::js;
@@ -120,9 +121,19 @@ const STYLE: &str = r#"
     }
 
     img {
+        position: absolute;
+        transition: opacity 0.5s linear;
         object-fit: contain;
         height: 100vh;
         width: 100vw;
+    }
+
+    img.current {
+        opacity: 255;
+    }
+
+    img.standby {
+        opacity: 0;
     }
 "#;
 
@@ -130,13 +141,14 @@ enum Msg {
     Interval,
 }
 
-struct Image {
-    _interval: IntervalService,
+struct Slider {
     _task: Box<dyn Task>,
+    loaded: Vec<String>,
+    selected: usize,
 }
 
-impl Image {
-    fn random(&self) -> String {
+impl Slider {
+    fn random() -> String {
         let multiplier = IMAGES.len() as f64;
         let result = js! { return Math.random(); };
         let random: f64 = result.try_into().unwrap();
@@ -145,31 +157,49 @@ impl Image {
 
         format!("{}/{}", BASE, link)
     }
+
+    fn class(&self, index: usize) -> &str {
+        if self.selected == index {
+            "current"
+        } else {
+            "standby"
+        }
+    }
 }
 
-impl Component for Image {
+impl Component for Slider {
     type Message = Msg;
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let mut interval = IntervalService::new();
-
-        let duration = Duration::from_secs(10);
         let callback = link.callback(|_| Msg::Interval);
-        let handle = interval.spawn(duration, callback);
+        let duration = Duration::from_secs(10);
 
-        Image {
-            _interval: interval,
+        let handle = IntervalService::new().spawn(duration, callback);
+        let initial = (0..3).map(|_| Self::random()).collect();
+
+        Slider {
             _task: Box::new(handle),
+            loaded: initial,
+            selected: 0,
         }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+        let next = (self.selected + 1) % self.loaded.len();
+        let load = (self.selected + 2) % self.loaded.len();
+        let link = Self::random();
+
+        replace(&mut self.loaded[load], link);
+        self.selected = next;
+
         true
     }
 
     fn view(&self) -> Html {
-        html! { <img src={{ self.random() }} /> }
+        html! { for self.loaded.iter().enumerate().map(|(i, src)| {
+            html! { <img class={{ self.class(i) }} src={{ src }} /> }
+        })}
     }
 }
 
@@ -191,7 +221,7 @@ impl Component for App {
         html! {
             <div>
                 <style>{STYLE}</style>
-                <Image />
+                <Slider />
             </div>
         }
     }
