@@ -1,4 +1,3 @@
-use std::mem::replace;
 use std::time::Duration;
 
 use stdweb::js;
@@ -190,7 +189,7 @@ impl Component for Slider {
         let load = (self.selected + 2) % self.loaded.len();
         let link = Self::random();
 
-        replace(&mut self.loaded[load], link);
+        self.loaded[load] = link;
         self.selected = next;
 
         true
@@ -219,10 +218,10 @@ impl Component for App {
 
     fn view(&self) -> Html {
         html! {
-            <div>
+            <>
                 <style>{STYLE}</style>
                 <Slider />
-            </div>
+            </>
         }
     }
 }
