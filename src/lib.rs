@@ -173,7 +173,7 @@ impl Component for Slider {
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let callback = link.callback(|_| Msg::Interval);
-        let duration = Duration::from_secs(10);
+        let duration = Duration::from_secs(30);
 
         let handle = IntervalService::new().spawn(duration, callback);
         let initial = (0..3).map(|_| Self::random()).collect();
