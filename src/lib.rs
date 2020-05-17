@@ -222,7 +222,7 @@ impl Component for Model {
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        true
+        false
     }
 
     fn view(&self) -> Html {
