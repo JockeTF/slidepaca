@@ -129,10 +129,12 @@ const STYLE: &str = r#"
 
     img.current {
         opacity: 255;
+        z-index: 1;
     }
 
     img.standby {
         opacity: 0;
+        z-index: 0;
     }
 "#;
 
