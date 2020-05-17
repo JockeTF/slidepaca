@@ -3,8 +3,8 @@ use std::time::Duration;
 use js_sys::Math;
 
 use yew::prelude::*;
-use yew::services::IntervalService;
 use yew::services::Task;
+use yew::services::TimeoutService;
 
 use wasm_bindgen::prelude::*;
 
@@ -138,14 +138,17 @@ const STYLE: &str = r#"
     }
 "#;
 
+#[derive(Clone)]
 enum Msg {
-    Interval,
+    Preload,
+    Switch,
 }
 
 struct Slider {
-    _task: Box<dyn Task>,
-    loaded: Vec<String>,
-    selected: usize,
+    current: usize,
+    link: ComponentLink<Self>,
+    tags: Vec<String>,
+    task: Box<dyn Task>,
 }
 
 impl Slider {
@@ -159,11 +162,39 @@ impl Slider {
     }
 
     fn class(&self, index: usize) -> &str {
-        if self.selected == index {
+        if self.current == index {
             "current"
         } else {
             "standby"
         }
+    }
+
+    fn schedule(&mut self, msg: Msg, seconds: u64) {
+        let duration = Duration::from_secs(seconds);
+        let callback = self.link.callback(move |_| msg.clone());
+        let handle = TimeoutService::new().spawn(duration, callback);
+
+        self.task = Box::new(handle);
+    }
+
+    fn preload(&mut self) -> ShouldRender {
+        let tags = self.tags.len();
+        let prev = (self.current + tags - 1) % tags;
+
+        self.tags[prev] = Self::random();
+        self.schedule(Msg::Switch, 25);
+
+        true
+    }
+
+    fn switch(&mut self) -> ShouldRender {
+        let tags = self.tags.len();
+        let next = (self.current + 1) % tags;
+
+        self.current = next;
+        self.schedule(Msg::Preload, 5);
+
+        true
     }
 }
 
@@ -172,16 +203,17 @@ impl Component for Slider {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let callback = link.callback(|_| Msg::Interval);
-        let duration = Duration::from_secs(30);
+        let initial = (0..2).map(|_| Self::random()).collect();
 
-        let handle = IntervalService::new().spawn(duration, callback);
-        let initial = (0..3).map(|_| Self::random()).collect();
+        let duration = Duration::from_secs(30);
+        let callback = link.callback(|_| Msg::Switch);
+        let handle = TimeoutService::new().spawn(duration, callback);
 
         Slider {
-            _task: Box::new(handle),
-            loaded: initial,
-            selected: 0,
+            current: 0,
+            link,
+            tags: initial,
+            task: Box::new(handle),
         }
     }
 
@@ -189,19 +221,15 @@ impl Component for Slider {
         false
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        let next = (self.selected + 1) % self.loaded.len();
-        let load = (self.selected + 2) % self.loaded.len();
-        let link = Self::random();
-
-        self.loaded[load] = link;
-        self.selected = next;
-
-        true
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        match msg {
+            Msg::Preload => self.preload(),
+            Msg::Switch => self.switch(),
+        }
     }
 
     fn view(&self) -> Html {
-        html! { for self.loaded.iter().enumerate().map(|(i, src)| {
+        html! { for self.tags.iter().enumerate().map(|(i, src)| {
             html! { <img class={{ self.class(i) }} src={{ src }} /> }
         })}
     }
