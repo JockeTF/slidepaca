@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use stdweb::js;
-use stdweb::unstable::TryInto;
+use js_sys::Math;
 
 use yew::prelude::*;
 use yew::services::IntervalService;
 use yew::services::Task;
-use yew::start_app;
+
+use wasm_bindgen::prelude::*;
 
 const BASE: &str = "https://jocketf.se/tea";
 
@@ -148,9 +148,8 @@ struct Slider {
 
 impl Slider {
     fn random() -> String {
+        let random = Math::random();
         let multiplier = IMAGES.len() as f64;
-        let result = js! { return Math.random(); };
-        let random: f64 = result.try_into().unwrap();
         let number = (random * multiplier).floor() as usize;
         let link = IMAGES.get(number % IMAGES.len()).unwrap();
 
@@ -184,6 +183,10 @@ impl Component for Slider {
         }
     }
 
+    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+        false
+    }
+
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
         let next = (self.selected + 1) % self.loaded.len();
         let load = (self.selected + 2) % self.loaded.len();
@@ -202,14 +205,18 @@ impl Component for Slider {
     }
 }
 
-struct App {}
+struct Model {}
 
-impl Component for App {
+impl Component for Model {
     type Message = ();
     type Properties = ();
 
     fn create(_props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        App {}
+        Model {}
+    }
+
+    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+        false
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
@@ -226,6 +233,7 @@ impl Component for App {
     }
 }
 
-fn main() {
-    start_app::<App>();
+#[wasm_bindgen(start)]
+pub fn initialize() {
+    App::<Model>::new().mount_to_body();
 }

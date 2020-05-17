@@ -4,10 +4,14 @@ version = "0.1.0"
 authors = ["Joakim Soderlund <joakim.soderlund@gmail.com>"]
 edition = "2018"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
-yew = "^0.12"
-stdweb = "*"
+js-sys = "*"
+wasm-bindgen = "*"
+yew = "*"
 
 [profile.release]
 lto = true
-opt-level = 'z'
+opt-level = 's'
