@@ -172,7 +172,7 @@ impl Slider {
     fn schedule(&mut self, msg: Msg, seconds: u64) {
         let duration = Duration::from_secs(seconds);
         let callback = self.link.callback(move |_| msg.clone());
-        let handle = TimeoutService::new().spawn(duration, callback);
+        let handle = TimeoutService::spawn(duration, callback);
 
         self.task = Box::new(handle);
     }
@@ -207,7 +207,7 @@ impl Component for Slider {
 
         let duration = Duration::from_secs(30);
         let callback = link.callback(|_| Msg::Switch);
-        let handle = TimeoutService::new().spawn(duration, callback);
+        let handle = TimeoutService::spawn(duration, callback);
 
         Slider {
             current: 0,
