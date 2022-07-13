@@ -1,12 +1,8 @@
-use std::time::Duration;
-
+use gloo_timers::callback::Timeout;
 use js_sys::Math;
-
-use yew::prelude::*;
-use yew::services::Task;
-use yew::services::TimeoutService;
-
 use wasm_bindgen::prelude::*;
+use yew::html::Scope;
+use yew::prelude::*;
 
 const BASE: &str = "https://jocketf.se/tea";
 
@@ -146,9 +142,9 @@ enum Msg {
 
 struct Slider {
     current: usize,
-    link: ComponentLink<Self>,
+    link: Scope<Self>,
     tags: Vec<String>,
-    task: Box<dyn Task>,
+    task: Timeout,
 }
 
 impl Slider {
@@ -161,7 +157,7 @@ impl Slider {
         format!("{}/{}", BASE, link)
     }
 
-    fn class(&self, index: usize) -> &str {
+    fn class(&self, index: usize) -> &'static str {
         if self.current == index {
             "current"
         } else {
@@ -169,15 +165,15 @@ impl Slider {
         }
     }
 
-    fn schedule(&mut self, msg: Msg, seconds: u64) {
-        let duration = Duration::from_secs(seconds);
-        let callback = self.link.callback(move |_| msg.clone());
-        let handle = TimeoutService::spawn(duration, callback);
+    fn schedule(&mut self, msg: Msg, seconds: u32) {
+        let link = self.link.clone();
+        let func = move || link.send_message(msg);
+        let handle = Timeout::new(seconds * 1000, func);
 
-        self.task = Box::new(handle);
+        self.task = handle;
     }
 
-    fn preload(&mut self) -> ShouldRender {
+    fn preload(&mut self) -> bool {
         let tags = self.tags.len();
         let prev = (self.current + tags - 1) % tags;
 
@@ -187,7 +183,7 @@ impl Slider {
         true
     }
 
-    fn switch(&mut self) -> ShouldRender {
+    fn switch(&mut self) -> bool {
         let tags = self.tags.len();
         let next = (self.current + 1) % tags;
 
@@ -202,35 +198,35 @@ impl Component for Slider {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         let initial = (0..2).map(|_| Self::random()).collect();
 
-        let duration = Duration::from_secs(30);
-        let callback = link.callback(|_| Msg::Switch);
-        let handle = TimeoutService::spawn(duration, callback);
+        let link = ctx.link().clone();
+        let func = move || link.send_message(Msg::Switch);
+        let handle = Timeout::new(30 * 1000, func);
 
         Slider {
             current: 0,
-            link,
+            link: ctx.link().clone(),
             tags: initial,
-            task: Box::new(handle),
+            task: handle,
         }
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
         false
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Preload => self.preload(),
             Msg::Switch => self.switch(),
         }
     }
 
-    fn view(&self) -> Html {
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         html! { for self.tags.iter().enumerate().map(|(i, src)| {
-            html! { <img class={{ self.class(i) }} src={{ src }} /> }
+            html! { <img class={{ self.class(i) }} src={{ src.clone() }} /> }
         })}
     }
 }
@@ -241,19 +237,19 @@ impl Component for Model {
     type Message = ();
     type Properties = ();
 
-    fn create(_props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+    fn create(_ctx: &Context<Self>) -> Self {
         Model {}
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+    fn changed(&mut self, _ctx: &Context<Self>) -> bool {
         false
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _ctx: &Context<Self>, _msg: Self::Message) -> bool {
         false
     }
 
-    fn view(&self) -> Html {
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
             <>
                 <style>{STYLE}</style>
@@ -265,5 +261,5 @@ impl Component for Model {
 
 #[wasm_bindgen(start)]
 pub fn initialize() {
-    App::<Model>::new().mount_to_body();
+    yew::start_app::<Model>();
 }

@@ -8,9 +8,10 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+gloo-timers = "*"
 js-sys = "*"
 wasm-bindgen = "*"
-yew = "0.17"
+yew = "0.19"
 
 [profile.release]
 lto = true
